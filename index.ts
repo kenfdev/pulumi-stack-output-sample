@@ -1,4 +1,3 @@
 import * as pulumi from '@pulumi/pulumi';
 
-const config = new pulumi.Config();
-export const dbPassword = pulumi.secret(config.require('dbPassword'));
+export const password = pulumi.secret('THIS_IS_TOP_SECRET');

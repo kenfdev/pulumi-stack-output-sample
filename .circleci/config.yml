@@ -1,0 +1,107 @@
+version: 2.1
+
+# Going super-meta, we build/validate the orbs in this CircleCI config,
+# and we also use a dev build to test it.
+orbs:
+  pulumi: pulumi/pulumi@1.0.1
+
+workflows:
+  version: 2
+  test-orb:
+    jobs:
+      - test-output
+
+commands:
+  # stack init command
+  stack_init:
+    parameters:
+      stack:
+        type: string
+        description: "Name of the stack to initialize."
+      secrets_provider:
+        type: string
+        description: "The type of the provider that should be used to encrypt and decrypt secrets (possible choices: default, passphrase, awskms, azurekeyvault, gcpkms, hashivault) (default 'default')."
+        default: "default"
+      working_directory:
+        type: string
+        description:
+            "The relative working directory to use, i.e. where your Pulumi.yaml is located."
+        default: "."
+    steps:
+      - run:
+          name: "pulumi stack init --stack << parameters.stack >> --secrets-provider << parameters.secrets_provider >>"
+          command: pulumi stack init --stack << parameters.stack >> --secrets-provider << parameters.secrets_provider >> --cwd << parameters.working_directory >>
+
+  # stack rm command
+  stack_rm:
+    parameters:
+      stack:
+        type: string
+        description: "Name of the stack to remove."
+      force:
+        type: boolean
+        description: "Forces deletion of the stack, leaving behind any resources managed by the stack."
+        default: false
+      working_directory:
+        type: string
+        description:
+            "The relative working directory to use, i.e. where your Pulumi.yaml is located."
+        default: "."
+    steps:
+      - run:
+          name: "pulumi stack rm << parameters.stack >>"
+          command: pulumi stack rm << parameters.stack >> --yes <<# parameters.force >>--force<</ parameters.force >> --cwd << parameters.working_directory >>
+
+  # stack output command
+  stack_output:
+    parameters:
+      stack:
+        type: string
+        description: "Name of the stack to operate on."
+      property_name:
+        type: string
+        description: "Property name of the stack output to set to the environment variable."
+      env_var:
+        type: string
+        description: "Name of the environment variable to set the output property's value to."
+      show_secrets:
+        type: boolean
+        description: "Display stack outputs which are marked as secret in plaintext."
+        default: false
+      working_directory:
+        type: string
+        description:
+            "The relative working directory to use, i.e. where your Pulumi.yaml is located."
+        default: "."
+    steps:
+      - run:
+          name: "pulumi stack output << parameters.property_name >> --stack << parameters.stack >>"
+          command: | 
+            OUTPUT_VALUE=$(pulumi stack output << parameters.property_name >> --stack << parameters.stack >> <<# parameters.show_secrets >>--show-secrets<</ parameters.show_secrets >> --cwd << parameters.working_directory >>)
+            echo "export << parameters.env_var >>=\"${OUTPUT_VALUE}\"" >> $BASH_ENV
+
+jobs:
+  test-output:
+    docker:
+      - image: circleci/node:10
+    working_directory: ~/repo/
+    steps:
+      - checkout
+      - pulumi/login
+      - run:
+          name: Install NPM packages
+          command: npm install
+      - stack_init:
+          stack: stack-output-sample-${CIRCLE_BUILD_NUM}
+      - pulumi/update:
+          stack: stack-output-sample-${CIRCLE_BUILD_NUM}
+      - stack_output:
+          stack: stack-output-sample-${CIRCLE_BUILD_NUM}
+          property_name: password
+          env_var: PASSWORD
+          show_secrets: true
+      - run:
+          name: Show Password
+          command: echo ${PASSWORD}
+      - stack_rm:
+          stack: stack-output-sample-${CIRCLE_BUILD_NUM}
