@@ -1,0 +1,3 @@
+config:
+  pulumi-stack-output-sample:dbPassword:
+    secure: AAABAD7TU8JdJMhtZmd+VvTteED4bO9Kxx/IIfJ+FjrWgPFlauY=

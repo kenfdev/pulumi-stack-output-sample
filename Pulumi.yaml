@@ -1,0 +1,3 @@
+name: pulumi-stack-output-sample
+runtime: nodejs
+description: A minimal TypeScript Pulumi program
