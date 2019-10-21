@@ -11,6 +11,20 @@ workflows:
     jobs:
       - test-output
 
+executors:
+  default:
+    description: >
+      Docker image with Node.js
+    parameters:
+      tag:
+        type: string
+        default: latest
+        description: >
+          The tag of the docker image. See the following for the full list.
+          https://hub.docker.com/r/cibuilds/base/tags
+    docker:
+      - image: circleci/node:<< parameters.tag >>
+
 commands:
   # stack init command
   stack_init:
@@ -82,8 +96,9 @@ commands:
 
 jobs:
   test-output:
-    docker:
-      - image: circleci/node:10
+    executor: 
+      name: default
+      tag: '10'
     working_directory: ~/repo/
     steps:
       - checkout
